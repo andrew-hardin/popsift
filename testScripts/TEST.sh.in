@@ -4,7 +4,7 @@
 IMAGE=../../popsift-samples/sample/big_set/boat/img3.ppm
 # IMAGE=./test-17x17.pgm
 
-POPSIFT_DEMO_BIN=@EXECUTABLE_OUTPUT_PATH@/popsift-demo
+POPSIFT_DEMO_BIN=@CMAKE_RUNTIME_OUTPUT_DIRECTORY@/popsift-demo
 
 LOG=--log
 # LOG=
