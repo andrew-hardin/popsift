@@ -52,11 +52,14 @@ class SiftJob
 #endif
 
 public:
-    /** Constructor for byte images, value range 0..255 */
-    SiftJob( int w, int h, const unsigned char* imageData );
-
-    /** Constructor for float images, value range [0..1[ */
-    SiftJob( int w, int h, const float* imageData );
+    /** Construct a job by providing a pointer to image data that's copied.
+     * @param width the width of the image.
+     * @param lineStride the number of pixels in a line - usually matches width.
+     * @param height the height of the image.
+     * @param imageData the actual image data (uint8 or float32).
+     * @param pixelSize the number of bytes in a pixel.
+     */
+    SiftJob( int width, int lineStride, int height, const void* imageData, int pixelSize );
 
     ~SiftJob( );
 
@@ -171,6 +174,31 @@ public:
     SiftJob*  enqueue( int          w,
                        int          h,
                        const float* imageData );
+
+    /** Enqueue a strided byte image, value range [0, 255].
+     * @param width the width of the input image.
+     * @param height the height of the input image.
+     * @param imageData the image data within the range [0, 255].
+     * @param lineStride the number of pixels in a line (usually the same as width).
+     * @remark A copy of imageData memory is created.
+     */
+    SiftJob* enqueue( int                   w,
+                      int                   h,
+                      const unsigned char* imageData,
+                      int                  lineStride );
+
+    /** Enqueue a strided float image, value range [0, 1].
+     * @param width the width of the input image.
+     * @param height the height of the input image.
+     * @param imageData the image data within the range [0, 1].
+     * @param lineStride the number of pixels in a line (usually the same as width).
+     * @remark A copy of imageData memory is created.
+     */
+    SiftJob* enqueue( int          w,
+                      int          h,
+                      const float* imageData,
+                      int          lineStride );
+
 
     /**
      * @deprecated

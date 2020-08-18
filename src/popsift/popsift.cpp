@@ -227,6 +227,23 @@ SiftJob* PopSift::enqueue( int                  w,
                            int                  h,
                            const unsigned char* imageData )
 {
+    // Redirect with the stride being the same as the width.
+    return enqueue(w, h, imageData, w);
+}
+
+SiftJob* PopSift::enqueue( int          w,
+                           int          h,
+                           const float* imageData )
+{
+    // Redirect with the stride being the same as the width.
+    return enqueue(w, h, imageData, w);
+}
+
+SiftJob* PopSift::enqueue( int                  w,
+                           int                  h,
+                           const unsigned char* imageData,
+                           int                  lineStride )
+{
     if( _image_mode != ByteImages )
     {
         cerr << __FILE__ << ":" << __LINE__ << " Image mode error" << endl
@@ -242,14 +259,15 @@ SiftJob* PopSift::enqueue( int                  w,
         return nullptr;
     }
 
-    SiftJob* job = new SiftJob( w, h, imageData );
+    SiftJob* job = new SiftJob( w, lineStride, h, imageData, sizeof(unsigned char) );
     _pipe._queue_stage1.push( job );
     return job;
 }
 
 SiftJob* PopSift::enqueue( int          w,
                            int          h,
-                           const float* imageData )
+                           const float* imageData,
+                           int          lineStride )
 {
     if( _image_mode != FloatImages )
     {
@@ -266,7 +284,7 @@ SiftJob* PopSift::enqueue( int          w,
         return nullptr;
     }
 
-    SiftJob* job = new SiftJob( w, h, imageData );
+    SiftJob* job = new SiftJob( w, lineStride, h, imageData, sizeof(float) );
     _pipe._queue_stage1.push( job );
     return job;
 }
@@ -338,37 +356,37 @@ void PopSift::matchPrepareLoop( )
     }
 }
 
-SiftJob::SiftJob( int w, int h, const unsigned char* imageData )
-    : _w(w)
-    , _h(h)
+SiftJob::SiftJob( int width, int lineStride, int height, const void* imageData, int pixelSize )
+    : _w(width)
+    , _h(height)
     , _img(nullptr)
 {
     _f = _p.get_future();
 
-    _imageData = (unsigned char*)malloc( w*h );
+    int sizeBytes = width*height*pixelSize;
+    _imageData = (unsigned char*)malloc( sizeBytes );
     if( _imageData != nullptr )
     {
-        memcpy( _imageData, imageData, w*h );
-    }
-    else
-    {
-        cerr << __FILE__ << ":" << __LINE__ << " Memory limitation" << endl
-             << "E    Failed to allocate memory for SiftJob" << endl;
-        exit( -1 );
-    }
-}
+        if(width == lineStride)
+        {
+            // Copy as a single block.
+            memcpy( _imageData, imageData, sizeBytes );
+        }
+        else
+        {
+            // The imageData is strided - copy line-by-line.
+            const unsigned char* src = static_cast<const unsigned char*>(imageData);
+            unsigned char* dst = _imageData;
 
-SiftJob::SiftJob( int w, int h, const float* imageData )
-    : _w(w)
-    , _h(h)
-    , _img(nullptr)
-{
-    _f = _p.get_future();
+            int srcStride = lineStride * pixelSize;
+            int dstStride = width * pixelSize;
 
-    _imageData = (unsigned char*)malloc( w*h*sizeof(float) );
-    if( _imageData != nullptr )
-    {
-        memcpy( _imageData, imageData, w*h*sizeof(float) );
+            for(int r = 0; r < height; r++) {
+                memcpy( dst, src, dstStride);
+                dst += dstStride;
+                src += srcStride;
+            }
+        }
     }
     else
     {
